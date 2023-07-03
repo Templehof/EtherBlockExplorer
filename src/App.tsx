@@ -1,35 +1,63 @@
-import { Alchemy, Network } from "alchemy-sdk";
 import { useEffect, useState } from "react";
-
 import "./App.css";
-
-// Refer to the README doc for more information about using API
-// keys in client-side code. You should never do this in production
-// level code.
-const settings = {
-  apiKey: process.env.REACT_APP_ALCHEMY_API_KEY,
-  network: Network.ETH_MAINNET,
-};
-
-// In this week's lessons we used ethers.js. Here we are using the
-// Alchemy SDK is an umbrella library with several different packages.
-//
-// You can read more about the packages here:
-//   https://docs.alchemy.com/reference/alchemy-sdk-api-surface-overview#api-surface
-const alchemy = new Alchemy(settings);
+import {
+  CheckIsValidAddress,
+  WsSubscribe,
+  WsUnsubscribe,
+  getAdressBalance,
+} from "./InfoRequests";
 
 const App: React.FC = () => {
   const [blockNumber, setBlockNumber] = useState("");
+  const [address, setAddress] = useState("");
+  const [balance, setBalance] = useState("");
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setAddress(e.target.value);
+  }
+  function handleBlockNumUpdate(num: number) {
+    setBlockNumber(num.toString());
+  }
+  async function handleSubmit() {
+    if (!CheckIsValidAddress(address)) {
+      alert("Invalid address");
+      return;
+    }
+    const balance = await getAdressBalance(address);
+    setBalance(balance);
+  }
 
   useEffect(() => {
-    async function getBlockNumber() {
-      // setBlockNumber(await alchemy.core.getBlockNumber());
-    }
+    WsSubscribe(handleBlockNumUpdate);
 
-    getBlockNumber();
-  });
+    return () => {
+      WsUnsubscribe(handleBlockNumUpdate);
+    };
+  }, []);
 
-  return <div className="App">Block Number: {blockNumber}</div>;
+  return (
+    <div className="App">
+      <div className="header">
+        <h1 className="title-main">Ethereum block explorer</h1>
+        <p className="block-info">Latest block: {blockNumber}</p>
+      </div>
+      <div className="content">
+        <div className="inputs">
+          <input
+            type="text"
+            className="address-input"
+            placeholder="Ethereum address"
+            value={address}
+            onChange={handleChange}
+          ></input>
+          <div className="find-btn" onClick={handleSubmit}>
+            Search
+          </div>
+        </div>
+        {balance != "" && <p style={{justifySelf: "center"}}>Balance: {balance} eth</p>}
+      </div>
+    </div>
+  );
 };
 
 export default App;
